@@ -13,17 +13,17 @@ from werkzeug.security import generate_password_hash, check_password_hash
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "change_this_secret_123"
+app.secret_key = os.getenv("SECRET_KEY", "fallback_secret_123")
 
 
-# ---------------- DATABASE CONFIG ----------------
+# ---------------- DATABASE ----------------
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
 
-# ---------------- ADMIN CREDENTIALS ----------------
+# ---------------- ADMIN ----------------
 ADMIN_USER = os.getenv("ADMIN_USER")
 ADMIN_PASS = os.getenv("ADMIN_PASS")
 
@@ -38,7 +38,7 @@ class User(db.Model):
     password = db.Column(db.String(200), nullable=False)
 
 
-# Create DB automatically
+# Create DB
 with app.app_context():
     db.create_all()
 
@@ -72,7 +72,7 @@ def get_storage_usage():
 
         used_bytes = sum(f.get("bytes", 0) for f in files)
 
-        # Free plan approx 25GB
+        # Free plan approx limit (25GB)
         limit_bytes = 25 * 1024 * 1024 * 1024
 
 
@@ -84,18 +84,19 @@ def get_storage_usage():
     return used_mb, limit_mb, percent
 
 
-# =====================================================
-# ---------------- PUBLIC HOME PAGE -------------------
-# =====================================================
+# =================================================
+# HOME (PUBLIC VIEW + LOGIN REQUIRED UPLOAD)
+# =================================================
 @app.route("/", methods=["GET", "POST"])
 def home():
 
     message = ""
     file_url = ""
 
-    # If user tries upload
+    # Upload
     if request.method == "POST":
 
+        # Login required
         if not session.get("user"):
             return redirect("/login_user")
 
@@ -103,9 +104,15 @@ def home():
 
         if file:
             try:
-                result = cloudinary.uploader.upload(file)
+                # AUTO = image / video / pdf / docx
+                result = cloudinary.uploader.upload(
+                    file,
+                    resource_type="auto"
+                )
+
                 file_url = result["secure_url"]
                 message = "Upload Successful ✅"
+
             except Exception as e:
                 message = f"Upload Error: {str(e)}"
 
@@ -113,13 +120,14 @@ def home():
     # Get files
     data = cloudinary.api.resources(
         type="upload",
-        max_results=100
+        max_results=100,
+        resource_type="auto"
     )
 
     files = data.get("resources", [])
 
 
-    # Get storage usage
+    # Storage
     used_mb, limit_mb, percent = get_storage_usage()
 
 
@@ -138,9 +146,9 @@ def home():
     )
 
 
-# =====================================================
-# ---------------- USER REGISTER ----------------------
-# =====================================================
+# =================================================
+# USER REGISTER
+# =================================================
 @app.route("/register", methods=["GET", "POST"])
 def register():
 
@@ -170,9 +178,9 @@ def register():
     return render_template("register.html", msg=msg)
 
 
-# =====================================================
-# ---------------- USER LOGIN -------------------------
-# =====================================================
+# =================================================
+# USER LOGIN
+# =================================================
 @app.route("/login_user", methods=["GET", "POST"])
 def login_user():
 
@@ -191,14 +199,15 @@ def login_user():
             return redirect("/")
 
         else:
-            msg = "Invalid login ❌"
+            msg = "Invalid Login ❌"
+
 
     return render_template("user_login.html", msg=msg)
 
 
-# =====================================================
-# ---------------- USER LOGOUT ------------------------
-# =====================================================
+# =================================================
+# USER LOGOUT
+# =================================================
 @app.route("/logout_user")
 def logout_user():
 
@@ -206,9 +215,9 @@ def logout_user():
     return redirect("/")
 
 
-# =====================================================
-# ---------------- ADMIN LOGIN ------------------------
-# =====================================================
+# =================================================
+# ADMIN LOGIN
+# =================================================
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
@@ -227,12 +236,13 @@ def login():
         else:
             msg = "Invalid Login ❌"
 
+
     return render_template("login.html", msg=msg)
 
 
-# =====================================================
-# ---------------- ADMIN DASHBOARD --------------------
-# =====================================================
+# =================================================
+# ADMIN PANEL
+# =================================================
 @app.route("/admin")
 def admin():
 
@@ -242,7 +252,8 @@ def admin():
 
     data = cloudinary.api.resources(
         type="upload",
-        max_results=100
+        max_results=100,
+        resource_type="auto"
     )
 
     files = data.get("resources", [])
@@ -262,9 +273,9 @@ def admin():
     )
 
 
-# =====================================================
-# ---------------- DELETE (ADMIN ONLY) ----------------
-# =====================================================
+# =================================================
+# DELETE (ADMIN ONLY)
+# =================================================
 @app.route("/delete/<path:public_id>")
 def delete_file(public_id):
 
@@ -272,16 +283,21 @@ def delete_file(public_id):
         return redirect("/login")
 
     try:
-        cloudinary.uploader.destroy(public_id)
+        cloudinary.uploader.destroy(
+            public_id,
+            resource_type="auto"
+        )
+
     except Exception as e:
         print("Delete Error:", e)
+
 
     return redirect("/admin")
 
 
-# =====================================================
-# ---------------- ADMIN LOGOUT -----------------------
-# =====================================================
+# =================================================
+# ADMIN LOGOUT
+# =================================================
 @app.route("/logout")
 def logout():
 
@@ -289,9 +305,9 @@ def logout():
     return redirect("/")
 
 
-# =====================================================
-# ---------------- RUN SERVER -------------------------
-# =====================================================
+# =================================================
+# RUN SERVER (RENDER READY)
+# =================================================
 if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 5000))
