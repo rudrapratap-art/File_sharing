@@ -1,0 +1,6 @@
+flask
+cloudinary
+python-dotenv
+flask-sqlalchemy
+werkzeug
+gunicorn
