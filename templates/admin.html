@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+
+body{
+    margin:0;
+    font-family:"Segoe UI", Arial;
+    background:#f4f6f9;
+}
+
+/* Header */
+header{
+    background:#020617;
+    color:white;
+    padding:15px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+/* Container */
+.container{
+    max-width:1100px;
+    margin:auto;
+    padding:20px;
+}
+
+/* Table */
+.box{
+    background:white;
+    padding:20px;
+    border-radius:10px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,td{
+    padding:10px;
+    border-bottom:1px solid #ddd;
+    text-align:center;
+}
+
+th{ background:#e2e8f0; }
+
+.open{
+    color:#2563eb;
+    text-decoration:none;
+}
+
+.del{
+    background:#dc2626;
+    color:white;
+    padding:5px 10px;
+    border-radius:5px;
+    text-decoration:none;
+}
+
+</style>
+</head>
+
+<body>
+
+
+<header>
+
+<h3>📂 Admin Dashboard</h3>
+
+<div>
+<a href="/">Home</a> |
+<a href="/logout">Logout</a>
+</div>
+
+</header>
+
+
+<div class="container">
+
+<!-- STORAGE -->
+<p>
+<b>Storage:</b>
+{{ used_mb }} MB / {{ limit_mb }} MB
+</p>
+
+<div style="background:#ddd;height:8px;border-radius:10px;">
+<div style="
+width:{{ percent }}%;
+height:8px;
+background:#2563eb;
+border-radius:10px;">
+</div>
+</div>
+
+<br>
+
+
+<div class="box">
+
+<h3>Manage Files</h3>
+
+<table>
+
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Size (KB)</th>
+<th>Date</th>
+<th>Open</th>
+<th>Delete</th>
+</tr>
+
+{% for file in files %}
+
+<tr>
+
+<td>{{ file.public_id }}</td>
+<td>{{ file.format }}</td>
+<td>{{ (file.bytes/1024)|round(2) }}</td>
+<td>{{ file.created_at[:10] }}</td>
+
+<td>
+<a class="open"
+href="{{ file.secure_url }}"
+target="_blank">
+View
+</a>
+</td>
+
+<td>
+<a class="del"
+href="{{ url_for('delete_file', public_id=file.public_id) }}"
+onclick="return confirm('Delete this file?')">
+Delete
+</a>
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+</div>
+
+</body>
+</html>
